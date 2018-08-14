@@ -26,6 +26,7 @@ than Soft Actor Critic and Proximal Policy Optimization respectively on the half
 The provided environments require MuJoCo 1.31. Other dependencies can be installed with `pip install -r requirements.txt`.
 
 Alternatively, we have included a Dockerfile for your convenience; this repository will be found in `/root/handful-of-trials` within the image.
+We have also provided a prebuilt image; to use the image, run `docker pull kchua/handful-of-trials`.
 
 A few notes on the provided Docker image:
 1. Note that using MuJoCo requires that the user have a key; to use the Docker image, ensure that the key is mounted so that it is located at `/root/.mujoco/mjkey.txt`.
