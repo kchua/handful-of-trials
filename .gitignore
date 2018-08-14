@@ -1,0 +1,4 @@
+.idea
+tags
+*.pyc
+log/
