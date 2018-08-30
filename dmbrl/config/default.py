@@ -152,7 +152,7 @@ def _create_ctrl_config(ctrl_cfg, cfg_module, ctrl_type, ctrl_args, type_map):
             ctrl_cfg.prop_cfg.npart = 1
             type_map.ctrl_cfg.prop_cfg.npart = \
                 create_read_only("Only need one particle for deterministic propagation, do not modify.")
-        if ctrl_args["model-type"] == "D" and ctrl_args.prop_cfg.mode != "E":
+        if ctrl_args["model-type"] == "D" and ctrl_cfg.prop_cfg.mode != "E":
             raise ValueError("Can only use deterministic propagation for deterministic models.")
 
         ctrl_cfg.opt_cfg.mode = ctrl_args.get("opt-type", "CEM")
@@ -164,7 +164,7 @@ def _create_ctrl_config(ctrl_cfg, cfg_module, ctrl_type, ctrl_args, type_map):
                 epsilon=float,
                 alpha=float
             )
-        elif ctrl_cfg.opt_cfg.opt_mode == "Random":
+        elif ctrl_cfg.opt_cfg.mode == "Random":
             type_map.ctrl_cfg.opt_cfg.cfg = DotMap(
                 popsize=int
             )
