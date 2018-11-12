@@ -89,7 +89,7 @@ class CEMOptimizer(Optimizer):
                 new_var = tf.reduce_mean(tf.square(elites - new_mean), axis=0)
 
                 mean = self.alpha * mean + (1 - self.alpha) * new_mean
-                var = self.alpha * new_var + (1 - self.alpha) * new_var
+                var = self.alpha * var + (1 - self.alpha) * new_var
 
                 return t + 1, mean, var, best_val, best_sol
 
