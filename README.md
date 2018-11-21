@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/1805.12114v1">View on ArXiv</a>
+  <a href="https://arxiv.org/abs/1805.12114">View on ArXiv</a>
   |
   <a href="https://sites.google.com/view/drl-in-a-handful-of-trials/home">View website</a>
 </p>
