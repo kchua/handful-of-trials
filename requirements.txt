@@ -7,3 +7,4 @@ numpy==1.14.0
 scipy==0.19.0
 tensorflow-gpu>=1.9.0
 tqdm==4.19.4
+pytest>=4.6.3
