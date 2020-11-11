@@ -44,6 +44,7 @@ class TensorStandardScaler:
         sigma = np.std(data, axis=0, keepdims=True)
         sigma[sigma < 1e-12] = 1.0
 
+        # equal to tf.assign in tf2
         self.mu.load(mu)
         self.sigma.load(sigma)
         self.fitted = True
@@ -81,6 +82,8 @@ class TensorStandardScaler:
 
         Returns: None.
         """
+
+        # use a default session, return the value of this variable
         self.cached_mu = self.mu.eval()
         self.cached_sigma = self.sigma.eval()
 

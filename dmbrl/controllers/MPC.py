@@ -266,6 +266,11 @@ class MPC(Controller):
         t, nopt = tf.constant(0), tf.shape(ac_seqs)[0]
         init_costs = tf.zeros([nopt, self.npart])
         ac_seqs = tf.reshape(ac_seqs, [-1, self.plan_hor, self.dU])
+        # original [pop, plan_hor , dU]
+        # transpose to [plan_hor, pop , dU]
+        # add one demonsion [plan_hor, pop , 1, dU] pop is ac_seqs num, brief of population 
+        # tile to [plan_hor, pop , npart, dU]
+        # reshape to [plan_hor, pop * npart, dU]
         ac_seqs = tf.reshape(tf.tile(
             tf.transpose(ac_seqs, [1, 0, 2])[:, :, None],
             [1, 1, self.npart, 1]
@@ -322,6 +327,7 @@ class MPC(Controller):
             # TS Optimization: Expand so that particles are only passed through one of the networks.
             if self.prop_mode == "TS1":
                 proc_obs = tf.reshape(proc_obs, [-1, self.npart, proc_obs.get_shape()[-1]])
+                # sort alone the last dimension, descending order,return indices
                 sort_idxs = tf.nn.top_k(
                     tf.random_uniform([tf.shape(proc_obs)[0], self.npart]),
                     k=self.npart

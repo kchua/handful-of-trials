@@ -39,7 +39,8 @@ class BNN:
 
         if params.get('sess', None) is None:
             config = tf.ConfigProto()
-            # config.gpu_options.allow_growth = True
+            config.gpu_options.allow_growth = True
+            config.gpu_options.per_process_gpu_memory_fraction = 0.4
             self._sess = tf.Session(config=config)
         else:
             self._sess = params.get('sess')
@@ -205,6 +206,7 @@ class BNN:
                 self.create_prediction_tensors(self.sy_pred_in3d, factored=True)
 
         # Load model if needed
+        # self.optimizer.variables() no need to save and load
         if self.model_loaded:
             with self.sess.as_default():
                 params_dict = loadmat(os.path.join(self.model_dir, "%s.mat" % self.name))
@@ -238,6 +240,7 @@ class BNN:
 
         # Split into training and holdout sets
         num_holdout = min(int(inputs.shape[0] * holdout_ratio), max_logging)
+        # shuffle np.range(inputs.shape[0])
         permutation = np.random.permutation(inputs.shape[0])
         inputs, holdout_inputs = inputs[permutation[num_holdout:]], inputs[permutation[:num_holdout]]
         targets, holdout_targets = targets[permutation[num_holdout:]], targets[permutation[:num_holdout]]
@@ -246,7 +249,7 @@ class BNN:
 
         with self.sess.as_default():
             self.scaler.fit(inputs)
-
+        #range bewteen 0-inuputs.shape[0]
         idxs = np.random.randint(inputs.shape[0], size=[self.num_nets, inputs.shape[0]])
         if hide_progress:
             epoch_range = range(epochs)
@@ -411,7 +414,9 @@ class BNN:
         if self.end_act is not None:
             mean = self.end_act(mean)
 
+        # equal as exp(max_logvar) * exp(logvar) / exp(max_logvar) + exp(logvar)
         logvar = self.max_logvar - tf.nn.softplus(self.max_logvar - cur_out[:, :, dim_output//2:])
+        # equal as exp(logvar) + exp(min_var)
         logvar = self.min_logvar + tf.nn.softplus(logvar - self.min_logvar)
 
         if ret_log_var:

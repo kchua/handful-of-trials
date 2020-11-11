@@ -5,6 +5,10 @@ from __future__ import absolute_import
 import os
 import argparse
 import pprint
+import sys
+
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from dotmap import DotMap
 
