@@ -175,8 +175,11 @@ class MPC(Controller):
             new_train_targs.append(self.targ_proc(obs[:-1], obs[1:]))
         self.train_in = np.concatenate([self.train_in] + new_train_in, axis=0)
         self.train_targs = np.concatenate([self.train_targs] + new_train_targs, axis=0)
-
+        # lets see how large the buffer is : )
+        print("model train lenght %d" % self.train_in.shape[0])
         # Train the model
+        # replay buffer no drop,train on full collected data every time
+        # real data is precious
         self.model.train(self.train_in, self.train_targs, **self.model_train_cfg)
         self.has_been_trained = True
 
@@ -211,10 +214,16 @@ class MPC(Controller):
         if self.model.is_tf_model:
             self.sy_cur_obs.load(obs, self.model.sess)
 
+        # per means how many step bewteen MPC
+        # ie. per=4 planning_horizon = 30
+        # plan a 30 action sequence, saved the first 4 in act_buf
+        # excute until act_buf is empty, then do MPC again
         soln = self.optimizer.obtain_solution(self.prev_sol, self.init_var)
         self.prev_sol = np.concatenate([np.copy(soln)[self.per*self.dU:], np.zeros(self.per*self.dU)])
         self.ac_buf = soln[:self.per*self.dU].reshape(-1, self.dU)
 
+        # if the act_buf is empty must return an action
+        # so need to call act function once again
         if get_pred_cost and not (self.log_traj_preds or self.log_particles):
             if self.model.is_tf_model:
                 pred_cost = self.model.sess.run(
@@ -265,6 +274,7 @@ class MPC(Controller):
     def _compile_cost(self, ac_seqs, get_pred_trajs=False):
         t, nopt = tf.constant(0), tf.shape(ac_seqs)[0]
         init_costs = tf.zeros([nopt, self.npart])
+        # [pop, plan_hor * dU] -> [pop, plan_hor , dU]
         ac_seqs = tf.reshape(ac_seqs, [-1, self.plan_hor, self.dU])
         # original [pop, plan_hor , dU]
         # transpose to [plan_hor, pop , dU]
@@ -275,17 +285,24 @@ class MPC(Controller):
             tf.transpose(ac_seqs, [1, 0, 2])[:, :, None],
             [1, 1, self.npart, 1]
         ), [self.plan_hor, -1, self.dU])
+        # tile([1, dO] , [pop * npart, 1] ->[pop * npart, dO]
+        # [pop * npart, dO]
         init_obs = tf.tile(self.sy_cur_obs[None], [nopt * self.npart, 1])
 
         def continue_prediction(t, *args):
             return tf.less(t, self.plan_hor)
 
         if get_pred_trajs:
+            # [1, pop * npart, dO]
             pred_trajs = init_obs[None]
 
             def iteration(t, total_cost, cur_obs, pred_trajs):
+                # [plan_hor, pop * npart, dU] - > [pop * npart, dU] taker one time step's action
+                # [pop * npart, dU]
                 cur_acs = ac_seqs[t]
+                # shape?
                 next_obs = self._predict_next_obs(cur_obs, cur_acs)
+                # [pop ,npart]
                 delta_cost = tf.reshape(
                     self.obs_cost_fn(next_obs) + self.ac_cost_fn(cur_acs), [-1, self.npart]
                 )
@@ -301,6 +318,7 @@ class MPC(Controller):
             )
 
             # Replace nan costs with very high cost
+            # return mean of all particles [pop, npart] -> [pop]
             costs = tf.reduce_mean(tf.where(tf.is_nan(costs), 1e6 * tf.ones_like(costs), costs), axis=1)
             pred_trajs = tf.reshape(pred_trajs, [self.plan_hor + 1, -1, self.npart, self.dO])
             return costs, pred_trajs
@@ -318,6 +336,7 @@ class MPC(Controller):
             )
 
             # Replace nan costs with very high cost
+            # return mean of all particles [pop, npart] -> [pop]
             return tf.reduce_mean(tf.where(tf.is_nan(costs), 1e6 * tf.ones_like(costs), costs), axis=1)
 
     def _predict_next_obs(self, obs, acs):
@@ -326,27 +345,39 @@ class MPC(Controller):
         if self.model.is_tf_model:
             # TS Optimization: Expand so that particles are only passed through one of the networks.
             if self.prop_mode == "TS1":
+                # [pop, npart, dO]
                 proc_obs = tf.reshape(proc_obs, [-1, self.npart, proc_obs.get_shape()[-1]])
                 # sort alone the last dimension, descending order,return indices
+                # [pop , npart], disarranged alone npart dim
+                # TS1 changes particles every timestep
                 sort_idxs = tf.nn.top_k(
                     tf.random_uniform([tf.shape(proc_obs)[0], self.npart]),
                     k=self.npart
                 ).indices
+                # [pop, npart, 1] aranged along pop dim
                 tmp = tf.tile(tf.range(tf.shape(proc_obs)[0])[:, None], [1, self.npart])[:, :, None]
+                # [pop, npart, 1] concatte [pop, npart, 1] along -1 -> [pop, npart, 2]
                 idxs = tf.concat([tmp, sort_idxs[:, :, None]], axis=-1)
+                # first dim from tmp, ordered range(pop)
+                # second dim from sort idx range(npart), disordered
+                # this means disarange [pop, npart, dO] disaranged by npart dim
                 proc_obs = tf.gather_nd(proc_obs, idxs)
+                # [pop * npart, dO]
                 proc_obs = tf.reshape(proc_obs, [-1, proc_obs.get_shape()[-1]])
             if self.prop_mode == "TS1" or self.prop_mode == "TSinf":
                 proc_obs, acs = self._expand_to_ts_format(proc_obs), self._expand_to_ts_format(acs)
 
             # Obtain model predictions
+            #if not TS [pop * npart, dU + dO]
+            # if TS [num_net, pop * npart / num_net, dU + dO]
             inputs = tf.concat([proc_obs, acs], axis=-1)
             mean, var = self.model.create_prediction_tensors(inputs)
             if self.model.is_probabilistic and not self.ign_var:
+                # probabilistic model predict guassian
+                # sample one point 
                 predictions = mean + tf.random_normal(shape=tf.shape(mean), mean=0, stddev=1) * tf.sqrt(var)
                 if self.prop_mode == "MM":
                     model_out_dim = predictions.get_shape()[-1].value
-
                     predictions = tf.reshape(predictions, [-1, self.npart, model_out_dim])
                     prediction_mean = tf.reduce_mean(predictions, axis=1, keep_dims=True)
                     prediction_var = tf.reduce_mean(tf.square(predictions - prediction_mean), axis=1, keep_dims=True)
@@ -354,18 +385,25 @@ class MPC(Controller):
                     samples = prediction_mean + z * tf.sqrt(prediction_var)
                     predictions = tf.reshape(samples, [-1, model_out_dim])
             else:
+                # E
                 predictions = mean
 
             # TS Optimization: Remove additional dimension
             if self.prop_mode == "TS1" or self.prop_mode == "TSinf":
+                # 
                 predictions = self._flatten_to_matrix(predictions)
             if self.prop_mode == "TS1":
+                # must recover the order
+                # the preditc is delta obs, true obs is (obs + pred)
+                # see self.obs_postproc in each env's config
                 predictions = tf.reshape(predictions, [-1, self.npart, predictions.get_shape()[-1]])
                 sort_idxs = tf.nn.top_k(
                     -sort_idxs,
                     k=self.npart
                 ).indices
                 idxs = tf.concat([tmp, sort_idxs[:, :, None]], axis=-1)
+                # [pop, npart, dO]  was previous disaranged by npart dim
+                # now arange back using order -sort_idxs
                 predictions = tf.gather_nd(predictions, idxs)
                 predictions = tf.reshape(predictions, [-1, predictions.get_shape()[-1]])
 
@@ -374,7 +412,11 @@ class MPC(Controller):
             raise NotImplementedError()
 
     def _expand_to_ts_format(self, mat):
+        # [pop * npart, dO]
         dim = mat.get_shape()[-1]
+        # reshape to [pop, num_net, npart / num_net, dO]
+        # transpose to [num_net, pop, npart / num_net, dO]
+        # reshape to [num_net, pop * npart / num_net, dO]
         return tf.reshape(
             tf.transpose(
                 tf.reshape(mat, [-1, self.model.num_nets, self.npart // self.model.num_nets, dim]),

@@ -43,6 +43,6 @@ if __name__ == "__main__":
                         help='Override default parameters, see https://github.com/kchua/handful-of-trials#overrides')
     parser.add_argument('-logdir', type=str, default='log',
                         help='Directory to which results will be logged (default: ./log)')
-    args = parser.parse_args()
+    args = parser.parse_args("-env halfcheetah -ca prop-type TS1".split())
 
     main(args.env, "MPC", args.ctrl_arg, args.override, args.logdir)

@@ -1,11 +1,14 @@
+print(__name__)
 import gym
-env = gym.make("Ant-v1")
+from dmbrl import env
+
+env = gym.make("MBRLHalfCheetah-v0")
 observation = env.reset()
-for _ in range(1000):
+for step in range(1000):
   # env.render()
   action = env.action_space.sample() # your agent here (this takes random actions)
   observation, reward, done, info = env.step(action)
-  print(observation)
+  print(step)
   if done:
     observation = env.reset()
 env.close()

@@ -180,6 +180,8 @@ class BNN:
                                                 name="training_targets")
             train_loss = tf.reduce_sum(self._compile_losses(self.sy_train_in, self.sy_train_targ, inc_var_loss=True))
             train_loss += tf.add_n(self.decays)
+            # regularization to ensure max_logvar not grow too much beyond training distribution
+            # and min_logvar not drop below training distribution
             train_loss += 0.01 * tf.reduce_sum(self.max_logvar) - 0.01 * tf.reduce_sum(self.min_logvar)
             self.mse_loss = self._compile_losses(self.sy_train_in, self.sy_train_targ, inc_var_loss=False)
 
@@ -250,6 +252,7 @@ class BNN:
         with self.sess.as_default():
             self.scaler.fit(inputs)
         #range bewteen 0-inuputs.shape[0]
+        # [ensemble size, train_sample_size]
         idxs = np.random.randint(inputs.shape[0], size=[self.num_nets, inputs.shape[0]])
         if hide_progress:
             epoch_range = range(epochs)
@@ -336,10 +339,14 @@ class BNN:
         """
         factored_mean, factored_variance = self._compile_outputs(inputs)
         if inputs.shape.ndims == 2 and not factored:
+            # DS 
+            # [ensemble_size, nparticle, dO] -> [nparticle, dO]
             mean = tf.reduce_mean(factored_mean, axis=0)
             variance = tf.reduce_mean(tf.square(factored_mean - mean), axis=0) + \
                        tf.reduce_mean(factored_variance, axis=0)
             return mean, variance
+        # TS1, TSInf
+        # [ensemble_size, nparticle / ensemble_size, dO]
         return factored_mean, factored_variance
 
     def save(self, savedir=None):
@@ -414,6 +421,7 @@ class BNN:
         if self.end_act is not None:
             mean = self.end_act(mean)
 
+        # notice the gradient flows here through max_logvar and min_logvar
         # equal as exp(max_logvar) * exp(logvar) / exp(max_logvar) + exp(logvar)
         logvar = self.max_logvar - tf.nn.softplus(self.max_logvar - cur_out[:, :, dim_output//2:])
         # equal as exp(logvar) + exp(min_var)
@@ -442,6 +450,7 @@ class BNN:
         inv_var = tf.exp(-log_var)
 
         if inc_var_loss:
+            # max log liklihood in for Gaussian
             mse_losses = tf.reduce_mean(tf.reduce_mean(tf.square(mean - targets) * inv_var, axis=-1), axis=-1)
             var_losses = tf.reduce_mean(tf.reduce_mean(log_var, axis=-1), axis=-1)
             total_losses = mse_losses + var_losses

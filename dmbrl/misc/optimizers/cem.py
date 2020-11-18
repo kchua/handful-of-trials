@@ -32,6 +32,7 @@ class CEMOptimizer(Optimizer):
                 next_mean = alpha * old_mean + (1 - alpha) * elite_mean, and similarly for variance.
         """
         super().__init__()
+        # planning_horizon * dU (action dim)
         self.sol_dim, self.max_iters, self.popsize, self.num_elites = sol_dim, max_iters, popsize, num_elites
         self.ub, self.lb = upper_bound, lower_bound
         self.epsilon, self.alpha = epsilon, alpha
@@ -73,6 +74,7 @@ class CEMOptimizer(Optimizer):
             def iteration(t, mean, var, best_val, best_sol):
                 lb_dist, ub_dist = mean - self.lb, self.ub - mean
                 constrained_var = tf.minimum(tf.minimum(tf.square(lb_dist / 2), tf.square(ub_dist / 2)), var)
+                # [popsize, horizon * dU]
                 samples = tf.truncated_normal([self.popsize, self.sol_dim], mean, tf.sqrt(constrained_var))
 
                 costs = cost_function(samples)

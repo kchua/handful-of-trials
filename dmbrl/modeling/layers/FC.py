@@ -68,6 +68,9 @@ class FC:
         if len(input_tensor.shape) == 2:
             raw_output = tf.einsum("ij,ajk->aik", input_tensor, self.weights) + self.biases
         elif len(input_tensor.shape) == 3 and input_tensor.shape[0].value == self.ensemble_size:
+            # [ensemble_size, pop * nparticle / ensemble_size,input_dim] matmal [ensemble_size, input_dim, output_dim]
+            # this is a trick, previous named tf.batch_matmul
+            # https://stackoverflow.com/questions/38235555/tensorflow-matmul-of-input-matrix-with-batch-data
             raw_output = tf.matmul(input_tensor, self.weights) + self.biases
         else:
             raise ValueError("Invalid input dimension.")
