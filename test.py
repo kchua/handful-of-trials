@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import sys
 
+
 # def shuffle_rows(arr):
 #     idxs = np.argsort(np.random.uniform(size=arr.shape), axis=-1)
 #     return arr[np.arange(arr.shape[0])[:, None], idxs]
@@ -23,6 +24,7 @@ import dmbrl.env
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
+gym.spaces
 print(__name__)
 env = gym.make("MBRLHalfCheetah-v0")
 observation = env.reset()

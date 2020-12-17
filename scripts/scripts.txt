@@ -1,0 +1,33 @@
+python scripts/mbexp.py -env halfcheetah
+
+# try render.py to render
+# mujoco 1.31 cannot run on macos  
+python scripts/render.py -env halfcheetah -model-dir /data/ShenShuo/workspace/handful-of-trials/log/2020-11-06--17:54:08 -logdir test_render
+
+python scripts/render.py -env halfcheetah -model-dir /Users/shenshuo/Documents/GitHub/handful-of-trials/log/2020-11-06--17:54:08 -logdir test_render
+
+
+# 2020-11-25 
+## experiments on 4 env with CEM
+python scripts/mbexp.py -env halfcheetah -ca model-type PE -ca prop-type TSinf -ca opt-type CEM -logdir log/halfcheetah_PE_TSinf_CEM
+
+python scripts/mbexp.py -env cartpole -ca model-type PE -ca prop-type TSinf -ca opt-type CEM -logdir log/cartpole_PE_TSinf_CEM
+
+python scripts/mbexp.py -env reacher -ca model-type PE -ca prop-type TSinf -ca opt-type CEM -logdir log/reacher_PE_TSinf_CEM
+
+python scripts/mbexp.py -env pusher -ca model-type PE -ca prop-type TSinf -ca opt-type CEM -logdir log/pusher_PE_TSinf_CEM
+
+## experiments on 4 env with Random Shooting
+
+python scripts/mbexp.py -env halfcheetah -ca model-type PE -ca prop-type TSinf -ca opt-type Random -logdir log/halfcheetah_PE_TSinf_Random
+
+python scripts/mbexp.py -env cartpole -ca model-type PE -ca prop-type TSinf -ca opt-type Random -logdir log/cartpole_PE_TSinf_Random
+
+python scripts/mbexp.py -env reacher -ca model-type PE -ca prop-type TSinf -ca opt-type Random -logdir log/reacher_PE_TSinf_Random
+
+python scripts/mbexp.py -env pusher -ca model-type PE -ca prop-type TSinf -ca opt-type Random -logdir log/pusher_PE_TSinf_Random
+
+# 2020-11-26
+## test if change gym to 0.15.7 still workspace
+python scripts/mbexp.py -env cartpole -ca model-type PE -ca prop-type TSinf -ca opt-type Random -logdir play/log/cartpole_test
+

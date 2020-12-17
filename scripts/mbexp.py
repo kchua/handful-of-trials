@@ -7,7 +7,7 @@ import argparse
 import pprint
 import sys
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from dotmap import DotMap
@@ -43,6 +43,6 @@ if __name__ == "__main__":
                         help='Override default parameters, see https://github.com/kchua/handful-of-trials#overrides')
     parser.add_argument('-logdir', type=str, default='log',
                         help='Directory to which results will be logged (default: ./log)')
-    args = parser.parse_args("-env halfcheetah -ca prop-type TS1".split())
+    args = parser.parse_args()
 
     main(args.env, "MPC", args.ctrl_arg, args.override, args.logdir)

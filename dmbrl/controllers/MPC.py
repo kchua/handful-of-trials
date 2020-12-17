@@ -300,7 +300,7 @@ class MPC(Controller):
                 # [plan_hor, pop * npart, dU] - > [pop * npart, dU] taker one time step's action
                 # [pop * npart, dU]
                 cur_acs = ac_seqs[t]
-                # shape?
+                # [pop * npart, dO]
                 next_obs = self._predict_next_obs(cur_obs, cur_acs)
                 # [pop ,npart]
                 delta_cost = tf.reshape(
